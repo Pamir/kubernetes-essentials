@@ -1,8 +1,8 @@
 ### Installations
-Install kubectx </p>
-Install kubeps-1 </p>
+Install kubectx  https://github.com/ahmetb/kubectx</p>
+Install kubeps-1 https://github.com/jonmosco/kube-ps1</p>
 Install azure sdk </p>
-Install Kube Alias </p>
+Install Kube Alias https://github.com/ahmetb/kubectl-aliases</p>
 
 https://aksworkshop.io/
 
