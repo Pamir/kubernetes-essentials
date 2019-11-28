@@ -7,17 +7,24 @@ metadata:
     internalVersion: 0.0.1
   name: kuard
 spec:
+  volumes:
+    - name: "kuard-data"
+      hostPath:
+        path: /var/lib
   containers:
   - image: gcr.io/kuar-demo/kuard-amd64:1
     imagePullPolicy: IfNotPresent
     name: kuard
     resources:
       requests:
-        memory: "102400Mi"
-        cpu: "8000m"
+        cpu: "500m"
+        memory: "128Mi"
       limits:
-        memory: "102400Mi"
-        cpu: "8000m"
+        cpu: "1000m"
+        memory: "1024Mi"
+    volumeMounts:
+      - mountPath: "/data"
+        name: "kuard-data"  
     ports:
     - containerPort: 8080
       name: http
