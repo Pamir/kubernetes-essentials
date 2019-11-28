@@ -10,7 +10,7 @@ spec:
   volumes:
     - name: "kuard-data"
       hostPath:
-        path: /var/lib
+        path: /etc
   containers:
   - image: gcr.io/kuar-demo/kuard-amd64:1
     imagePullPolicy: IfNotPresent
@@ -23,7 +23,7 @@ spec:
         cpu: "1000m"
         memory: "1024Mi"
     volumeMounts:
-      - mountPath: "/data"
+      - mountPath: "/pamir"
         name: "kuard-data"  
     ports:
     - containerPort: 8080
