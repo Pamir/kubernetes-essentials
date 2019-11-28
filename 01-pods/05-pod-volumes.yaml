@@ -23,7 +23,7 @@ spec:
         cpu: "1000m"
         memory: "1024Mi"
     volumeMounts:
-      - mountPath: "/pamir"
+      - mountPath: "/data"
         name: "kuard-data"  
     ports:
     - containerPort: 8080
