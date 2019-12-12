@@ -1,3 +1,4 @@
+ ```bash
  kubectl create ns bluegreen
  kubectl apply -f app-v1.yaml
  kubectl run --restart=Never --image=raesene/alpine-nettools nettools
@@ -10,3 +11,5 @@
 
  kubectl delete ns bluegreen
  kubectl delete pod nettools
+
+ ```
