@@ -6,3 +6,13 @@ Install Kube Alias https://github.com/ahmetb/kubectl-aliases</p>
 
 https://aksworkshop.io/
 
+#### Todo
+- PodPresets
+- ResourceQuota
+- Namespaces
+- Labels
+- Bash Completion
+- dnsPolicy
+  - ClusterFirstWithHostNet
+  - ClusterFirst
+- WindowsUserNames aka RunAsUserName

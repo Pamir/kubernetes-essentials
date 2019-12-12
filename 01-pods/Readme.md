@@ -1,0 +1,11 @@
+#### Tode
+- Quality of Service for Pods
+- Projected Volume
+- ImagePull Policy
+- Private Registry
+- Share Process Namespace between Containers in a Pod
+- static pods
+- kompose
+- terminationGracePeriodSeconds
+- terminationMessagePath: /dev/termination-log
+- terminationMessagePolicy: File
