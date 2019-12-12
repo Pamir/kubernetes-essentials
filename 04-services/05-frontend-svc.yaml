@@ -14,4 +14,4 @@ spec:
     app: guestbook
     tier: frontend
   sessionAffinity: None
-  type: NodePort
+  type: LoadBalancer
