@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sherlock-config
+data:
+  config.yaml: |
+    labels:
+      - "app"
+      - "owner"
