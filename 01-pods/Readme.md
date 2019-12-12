@@ -1,4 +1,4 @@
-#### Tode
+#### Todo
 - Quality of Service for Pods
 - Projected Volume
 - ImagePull Policy
