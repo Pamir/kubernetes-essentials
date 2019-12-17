@@ -1,3 +1,4 @@
+```bash
 kubectl apply -f 02-pod.yaml
 kubectl delete -f 02-pod.yaml
 
@@ -11,7 +12,7 @@ kubectl describe pod nginx
 kubectl label node xxx cpu=kotu
 kubectl get pods -w
 kubectl delete -f 07-nodeselector.yaml
-
+```
 #### Todo
 - Quality of Service for Pods
 - Projected Volume
