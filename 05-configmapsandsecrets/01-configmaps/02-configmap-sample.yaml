@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: nginx
+    env:
+    - name: option # name of the env variable
+      valueFrom:
+        configMapKeyRef:
+          name: simple-config # name of config map
+          key: name # name of the entity in config map
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}

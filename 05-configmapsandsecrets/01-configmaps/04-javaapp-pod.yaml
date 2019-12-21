@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    run: javaapp
+  name: javaapp
+  annotations:
+    configmap.reloader.stakater.com/reload: "log4j-config"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: javaapp
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: javaapp
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+        - mountPath: /var/configuration
+          name: log4j-volume
+    
+      volumes:
+      - name: log4j-volume 
+        configMap:
+          name: log4j-config

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: javaapp
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - mountPath: /var/configuration
+      name: log4j-volume
+  volumes:
+    - name: log4j-volume 
+      configMap:
+        name: log4j-config
