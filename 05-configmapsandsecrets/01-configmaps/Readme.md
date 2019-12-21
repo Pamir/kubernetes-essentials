@@ -99,5 +99,10 @@ kubectl edit configmap log4j-congig
 watch -n5 kubectl get pods
 kubectl delete configmap log4j-config
 kubectl delete deployment javaapp
-
+kubectl delete -f https://raw.githubusercontent.com/stakater/Reloader/master/deployments/kubernetes/reloader.yaml
 ```
+
+References
+- https://github.com/stakater/Reloader
+- https://azure.microsoft.com/en-us/resources/kubernetes-up-and-running/
+- https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
