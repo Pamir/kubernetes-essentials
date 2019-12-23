@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfsdata
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfsserver
+    path: "/nfsdata"
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nfsdata
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 10Gi
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: test-pd
+  labels:
+    app: test-pd
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: test-pd
+  template:
+    metadata:
+      labels:
+        app: test-pd
+    spec:
+      containers:
+      - image: nginx:1.7.9
+        name: test-container
+        volumeMounts:
+        - mountPath: /cache
+          name: cache-volume
+      volumes:
+      - name: cache-volume
+        persistentVolumeClaim:
+          claimName: nfsdata
