@@ -71,6 +71,7 @@ kubectl delete secret docker-registry
 
 #### TLS Secrets
 ```bash
+openssl req -newkey rsa:2048 -nodes -keyout jenkins.key -x509 -days 365 -out cenkins.crt
 kubectl create secret tls jenkins-tls-secret --key=jenkins.key --cert=jenkins.crt
 kubectl get secret
 ```
