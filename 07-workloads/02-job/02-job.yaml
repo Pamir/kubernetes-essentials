@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kubernetes-job-example
+  labels:
+    jobgroup: jobexample
+spec:
+  parallelism: 5
+  activeDeadlineSeconds: 100
+  template:
+    metadata:
+      name: kubejob
+      labels:
+        jobgroup: jobexample
+    spec:
+      containers:
+      - name: c
+        image: devopscube/kubernetes-job-demo:latest
+        args: ["100"]
+      restartPolicy: OnFailure

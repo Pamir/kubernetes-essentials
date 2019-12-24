@@ -15,3 +15,4 @@ spec:
     tier: frontend
   sessionAffinity: None
   type: NodePort
+ 
