@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: redis-master
+  name: redis-master
+  namespace: redis
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: redis-master
+  serviceName: redis-master
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: redis-master
+    spec:
+      containers:
+      - args:
+        - /opt/redis.conf
+        command:
+        - /opt/bin/k8s-redis-ha-server
+        env:
+        - name: SERVICE
+          value: redis-master
+        - name: SERVICE_PORT
+          value: redis-master
+        - name: SENTINEL
+          value: redis-sentinel
+        - name: SENTINEL_PORT
+          value: redis-sentinel
+        image: redis:4.0.11
+        imagePullPolicy: IfNotPresent
+        name: redis-master
+        ports:
+        - containerPort: 6379
+          name: redis-master
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - info
+            - server
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - info
+            - server
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: "1"
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data
+          name: redis-master-volume
+        - mountPath: /opt
+          name: opt
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - sysctl -w net.core.somaxconn=10000
+        image: busybox
+        imagePullPolicy: Always
+        name: init-sysctl
+        resources: {}
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      
+      - image: rifatx/redis-replication:master-latest
+        imagePullPolicy: Always
+        name: redis-ha-master
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt
+          name: opt
+
+      
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      
+      volumes:
+      - emptyDir: {}
+        name: opt
+  volumeClaimTemplates:
+  - metadata:
+      annotations:
+        volume.beta.kubernetes.io/storage-class: standard
+      name: redis-master-volume
+    spec:
+      storageClassName: standard
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
