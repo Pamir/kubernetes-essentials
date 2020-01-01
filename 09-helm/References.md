@@ -1,5 +1,0 @@
-- https://github.com/cloud-native-singapore/helm-workshop/blob/master/docs/03_CONVENTIONS.md
-- https://www.slideshare.net/djablonski/steering-the-course-with-helm
-- https://github.com/helm/charts
-- https://github.com/helm/helm
-- https://github.com/helm/chartmuseum
