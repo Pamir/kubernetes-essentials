@@ -89,3 +89,42 @@ Hello, world!
 Version: 2.0.0
 Hostname: web-v2-fb7cb48f5-kkzkc
 ```
+
+```bash
+openssl genrsa -out ca.key 2048
+openssl req -x509 -new -nodes -key ca.key -subj \
+   "/CN=$(kubectl get svc -n nginx-ingress  nginx-ingress-controller  \
+   -o jsonpath="{.status.loadBalancer.ingress[0].ip}")" -days 10000 -out ca.crt
+
+kubectl create secret tls web-tls --key=ca.key --cert=ca.crt -n nginx-ingress
+
+```
+
+```yaml
+  ## Additional command line arguments to pass to nginx-ingress-controller
+  ## E.g. to specify the default SSL certificate you can use
+  ## extraArgs:
+  ##   default-ssl-certificate: "<namespace>/<secret_name>"
+  extraArgs:
+    default-ssl-certificate: "nginx-ingress/web-tls"
+
+```
+
+```bash
+helm upgrade nginx-ingress stable/nginx-ingress -f values.yaml
+#wait 30 seconds
+openssl s_client -showcerts -connect 51.105.101.142:443
+```
+```
+CONNECTED(00000003)
+depth=0 CN = 51.105.101.142
+verify error:num=18:self signed certificate
+verify return:1
+depth=0 CN = 51.105.101.142
+verify return:1
+---
+Certificate chain
+ 0 s:/CN=51.105.101.142
+   i:/CN=51.105.101.142
+
+```
