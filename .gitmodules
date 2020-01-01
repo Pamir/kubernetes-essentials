@@ -1,0 +1,3 @@
+[submodule "09-helm/helm2-workshop"]
+	path = 09-helm/helm2-workshop
+	url = https://github.com/msdevengers/helm2-workshop.git
