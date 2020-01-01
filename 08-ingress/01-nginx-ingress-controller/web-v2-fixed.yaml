@@ -1,0 +1,40 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    run: web-v2
+  name: web-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: web-v2
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: web-v2
+    spec:
+      containers:
+      - image: gcr.io/google-samples/hello-app:2.0
+        name: web-v2
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          timeoutSeconds: 1
+          periodSeconds: 10
+          initialDelaySeconds: 30
+status: {}
