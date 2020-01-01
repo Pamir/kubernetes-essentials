@@ -130,3 +130,8 @@ Certificate chain
    i:/CN=51.105.101.142
 
 ```
+Cleanup
+```bash
+cd ..
+kubectl delete namespace sampleapp
+```
