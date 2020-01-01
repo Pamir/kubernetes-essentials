@@ -18,6 +18,7 @@ nginx-ingress-default-backend-576b86996d-hb49n   1/1     Running   0          3d
 #kubectl get services -n nginx-ingress
 kgsvc 
 ```
+
 ```
 NAME                               TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)                      AGE
 nginx-ingress-controller           LoadBalancer   10.0.234.248   51.105.101.142   80:30745/TCP,443:31815/TCP   7d19h
@@ -33,16 +34,17 @@ kubectl apply -f web-v1-svc.yaml
 kubectl apply -f web-v2-svc.yaml
 kubectl get pods
 ```
+```
 NAME                      READY   STATUS    RESTARTS   AGE
 web-v1-845d5c6978-6sgrl   1/1     Running   0          4h50m
 web-v2-fb7cb48f5-kkzkc    1/1     Running   0          4h51m
 
 ```
 
-```
 ```bash
 kubectl get service -n sampleapp
 ```
+
 ```
 NAME     TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
 web-v1   NodePort   10.0.171.226   <none>        8080:30060/TCP   4h51m
