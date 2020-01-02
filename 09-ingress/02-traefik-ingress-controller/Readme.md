@@ -1,5 +1,5 @@
 ```bash
-helm install -name traefik stable/traefik --namespace traefik -f values.yaml
+helm install --name traefik stable/traefik --namespace traefik -f values.yaml
 kubectl get pods -n traefik
 kubectl get svc -n traefik
 ```
