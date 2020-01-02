@@ -17,3 +17,4 @@ spec:
             - -c
             - sleep 100
           restartPolicy: OnFailure
+      parallelism: 3
