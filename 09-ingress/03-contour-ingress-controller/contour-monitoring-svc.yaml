@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: contour
+  name: contour-monitoring
+  namespace: contour
+spec:
+  ports:
+  - name: contour-monitoring
+    port: 8002
+    targetPort: 8002
+  - name: envoy-monitoring
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: contour
+    release: contour-ingress
+  type: ClusterIP

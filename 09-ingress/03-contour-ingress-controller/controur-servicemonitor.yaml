@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: kube-prometheus
+    release: prometheus
+  name: envoy
+  namespace: contour
+spec:
+  selector:
+    matchLabels:
+      app: contour
+  namespaceSelector:
+    matchNames:
+      - contour
+  endpoints:
+  - targetPort: 8002
+    interval: 30s
+    path: /stats/prometheus
+  - targetPort: 8000
+    path: /metrics
+    interval: 30s
