@@ -86,6 +86,8 @@ spec:
           mountPath: /var/lib/docker/containers
           readOnly: true
       terminationGracePeriodSeconds: 30
+      nodeSelector:
+        cpu: kotu
       volumes:
       - name: varlog
         hostPath:

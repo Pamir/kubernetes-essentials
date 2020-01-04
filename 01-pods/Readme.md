@@ -1,4 +1,5 @@
 ```bash
+alias k=kubectl
 kubectl apply -f 02-pod.yaml
 kubectl delete -f 02-pod.yaml
 
@@ -13,6 +14,21 @@ kubectl label node xxx cpu=kotu
 kubectl get pods -w
 kubectl delete -f 07-nodeselector.yaml
 ```
+
+```bash
+kubectl run nginx --image=nginx --restart=Never --command -it -- env
+kubectl run nginx --image=nginx --restart=Never --command -it -- env > command-pod.yaml
+kubectl apply -f command-pod.yaml
+kubectl run nginx --image=nginx --restart=Never  --command --dry-run=true -o yaml
+k run nginx --image=nginx --port=80 --dry-run=true -o yaml
+kubectl set image pod/nginx nginx=nginx:1.7.9
+kubectl get pods -o=jsonpath='{.items[*].spec.containers[*].image}{"\n"}'
+```
+
+
+
+
+
 #### Todo
 - Quality of Service for Pods
 - Projected Volume
