@@ -1,0 +1,11 @@
+kind: PodPreset
+apiVersion: settings.k8s.io/v1alpha1 
+metadata:
+  name: preset-enabled 
+spec:
+  selector:
+    matchLabels:
+      role: example 
+  env:
+    - name: IS_PRESET_ENABLED 
+      value: "yes" 
