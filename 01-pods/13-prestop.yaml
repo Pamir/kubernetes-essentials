@@ -13,3 +13,5 @@ spec:
       preStop:
         exec:
           command: ["/bin/sh","-c","nginx -s quit; while killall -0 nginx; do sleep 1; done"]
+  terminationGracePeriodSeconds: 60
+       
