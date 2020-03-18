@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  labels:
+    kubernetes.io/cluster-service: "true"
+  name: managed-ultra-lrs-02
+parameters:
+  cachingmode: ReadOnly
+  kind: Managed
+  storageaccounttype: UltraSSD_LRS
+provisioner: kubernetes.io/azure-disk
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
