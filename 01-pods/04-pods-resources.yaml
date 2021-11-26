@@ -22,6 +22,5 @@ spec:
     - containerPort: 8080
       name: http
       protocol: TCP
-    resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: OnFailure
