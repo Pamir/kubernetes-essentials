@@ -30,7 +30,7 @@ spec:
       - env:
         - name: GET_HOSTS_FROM
           value: dns
-        image: gcr.io/google_samples/gb-frontend:v2
+        image: gcr.io/google_samples/gb-frontend:v6
         imagePullPolicy: IfNotPresent
         name: php-redis
         ports:
