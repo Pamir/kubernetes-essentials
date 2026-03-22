@@ -1,0 +1,62 @@
+---
+# Headless Service for StatefulSet
+# A headless service (clusterIP: None) is required for StatefulSets
+# It provides DNS resolution for individual pods without load balancing
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-headless
+  namespace: default
+  labels:
+    app: nginx-stateful
+spec:
+  # clusterIP: None makes this a headless service
+  # This means no cluster IP is allocated and no load balancing is performed
+  # Instead, DNS returns the IP addresses of all pods directly
+  clusterIP: None
+  
+  # The service selector must match the StatefulSet pod labels
+  selector:
+    app: nginx-stateful
+  
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+
+---
+# Regular Service for External Access (Optional)
+# This provides a single IP for load-balanced access to all StatefulSet pods
+# Use this when you need external access with load balancing
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-stateful-service
+  namespace: default
+  labels:
+    app: nginx-stateful
+spec:
+  # This is a regular service with load balancing
+  type: ClusterIP
+  selector:
+    app: nginx-stateful
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+
+# DNS Resolution Examples:
+# 
+# Headless Service (nginx-headless):
+# - Returns all pod IPs directly
+# - nginx-headless.default.svc.cluster.local → [pod0-ip, pod1-ip, pod2-ip]
+# 
+# Individual Pod DNS (via headless service):
+# - nginx-statefulset-0.nginx-headless.default.svc.cluster.local → pod0-ip
+# - nginx-statefulset-1.nginx-headless.default.svc.cluster.local → pod1-ip
+# 
+# Regular Service (nginx-stateful-service):
+# - Returns single cluster IP with load balancing
+# - nginx-stateful-service.default.svc.cluster.local → cluster-ip

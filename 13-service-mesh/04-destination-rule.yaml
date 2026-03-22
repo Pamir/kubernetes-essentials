@@ -1,0 +1,213 @@
+---
+# DestinationRule Example - Service Subsets and Load Balancing
+# DestinationRule configures traffic policies for a destination service
+# Works together with VirtualService to define complete traffic management
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-server-dr
+  namespace: production
+spec:
+  # Target service this rule applies to
+  host: api-server
+  
+  # Default traffic policy for all subsets
+  trafficPolicy:
+    # Load balancing algorithm
+    loadBalancer:
+      simple: LEAST_CONN  # Options: ROUND_ROBIN, LEAST_CONN, RANDOM, PASSTHROUGH
+    
+    # Connection pool settings
+    connectionPool:
+      tcp:
+        maxConnections: 100        # Max connections to destination
+        connectTimeout: 30s        # TCP connection timeout
+        tcpNoDelay: true          # Disable Nagle's algorithm
+      http:
+        http1MaxPendingRequests: 64    # Queue for pending requests  
+        http2MaxRequests: 1000         # Max requests to destination
+        maxRequestsPerConnection: 10   # Max requests per connection
+        maxRetries: 3                  # Max retries to all hosts
+        consecutiveGatewayErrors: 5    # Circuit breaker threshold
+        interval: 30s                  # Analysis interval
+        baseEjectionTime: 30s          # Min ejection duration
+        maxEjectionPercent: 50         # Max % of hosts ejected
+    
+    # Retry policy
+    retryPolicy:
+      attempts: 3
+      perTryTimeout: 3s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+  
+  # Service subsets (versions) for traffic splitting
+  subsets:
+  # Stable version (v1)
+  - name: v1
+    labels:
+      version: v1
+    trafficPolicy:
+      # Override default load balancing for v1
+      loadBalancer:
+        simple: ROUND_ROBIN
+  
+  # Canary version (v2) with stricter policies
+  - name: v2
+    labels:
+      version: v2
+    trafficPolicy:
+      loadBalancer:
+        simple: LEAST_CONN
+      connectionPool:
+        tcp:
+          maxConnections: 50  # Smaller connection pool for canary
+        http:
+          http1MaxPendingRequests: 32
+          maxRequestsPerConnection: 5
+      # More aggressive circuit breaking for canary
+      outlierDetection:
+        consecutiveGatewayErrors: 3
+        interval: 15s
+        baseEjectionTime: 15s
+        maxEjectionPercent: 30
+
+---
+# DestinationRule with Consistent Hash Load Balancing
+# Ensures requests from the same user go to the same backend pod
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: user-service-dr
+  namespace: production
+spec:
+  host: user-service
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        # Hash based on specific header (user session)
+        httpHeaderName: "x-user-id"
+        # Alternative: hash based on cookie
+        # httpCookieName: "session-id"
+        # httpCookieTtl: 3600s
+        # Alternative: hash based on source IP
+        # useSourceIp: true
+  
+  subsets:
+  - name: stable
+    labels:
+      version: stable
+
+---
+# DestinationRule for Database with Circuit Breaker
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: database-dr
+  namespace: production
+spec:
+  host: postgres-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 20        # Limit database connections
+        connectTimeout: 10s
+      http:
+        http1MaxPendingRequests: 10
+        maxRequestsPerConnection: 2
+    
+    # Aggressive circuit breaker for database protection
+    outlierDetection:
+      consecutiveGatewayErrors: 2    # Fail after 2 errors
+      interval: 10s                  # Check every 10 seconds
+      baseEjectionTime: 60s          # Eject for at least 1 minute
+      maxEjectionPercent: 100        # Can eject all instances if needed
+
+---
+# DestinationRule with TLS Configuration
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: external-api-dr
+  namespace: production
+spec:
+  host: external-api.example.com
+  trafficPolicy:
+    tls:
+      mode: SIMPLE              # Use TLS (HTTPS)
+      # mode: MUTUAL            # For mutual TLS
+      # clientCertificate: /path/to/cert
+      # privateKey: /path/to/key
+      # caCertificates: /path/to/ca
+      sni: external-api.example.com
+      
+---
+# Regional DestinationRule - Geographic Load Balancing  
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: multi-region-service-dr
+  namespace: production
+spec:
+  host: global-service
+  trafficPolicy:
+    loadBalancer:
+      # Prefer local region, fallback to others
+      localityLbSetting:
+        enabled: true
+        distribute:
+        - from: region1/*
+          to:
+            "region1/*": 80
+            "region2/*": 20
+        - from: region2/*  
+          to:
+            "region2/*": 80
+            "region1/*": 20
+        failover:
+        - from: region1
+          to: region2
+  
+  subsets:
+  - name: region1
+    labels:
+      region: us-east-1
+  - name: region2
+    labels:
+      region: us-west-2
+
+# DestinationRule Configuration Options:
+# 
+# **Load Balancer Types:**
+# - ROUND_ROBIN: Default, distributes evenly
+# - LEAST_CONN: Routes to least loaded instance  
+# - RANDOM: Random selection
+# - PASSTHROUGH: Use original destination
+# - Consistent Hash: Session affinity based on headers/cookies/IP
+# 
+# **Connection Pool Settings:**
+# - TCP: maxConnections, connectTimeout, tcpNoDelay
+# - HTTP: pendingRequests, maxRequests, maxRetries
+# - Circuit breaker thresholds and timeouts
+# 
+# **Outlier Detection (Circuit Breaker):**
+# - consecutiveGatewayErrors: Failures before ejection
+# - interval: Analysis window
+# - baseEjectionTime: Minimum ejection period
+# - maxEjectionPercent: Max instances that can be ejected
+# 
+# **TLS Modes:**
+# - DISABLE: No TLS (plain HTTP)
+# - SIMPLE: Client-side TLS (HTTPS)
+# - MUTUAL: Mutual TLS authentication
+# - ISTIO_MUTUAL: Istio automatic mTLS
+# 
+# **Best Practices:**
+# 1. Start with conservative connection limits
+# 2. Monitor circuit breaker activation
+# 3. Use consistent hash for stateful services
+# 4. Configure appropriate timeouts for service SLAs
+# 5. Test circuit breaker behavior under load
+# 
+# **Monitoring:**
+# - Check Envoy admin interface: kubectl port-forward <pod> 15000:15000
+# - Circuit breaker stats: /stats?filter=circuit_breakers
+# - Connection pool stats: /stats?filter=cluster.outbound

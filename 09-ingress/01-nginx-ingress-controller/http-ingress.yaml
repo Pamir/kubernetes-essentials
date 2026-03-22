@@ -1,4 +1,5 @@
-apiVersion: extensions/v1beta1
+# HTTP Ingress with path-based routing using nginx controller
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: web-ingress
@@ -11,10 +12,16 @@ spec:
   - http:
       paths:
       - path: /v2/(.*)
+        pathType: Prefix
         backend:
-          serviceName: web-v2
-          servicePort: 8080
+          service:
+            name: web-v2
+            port:
+              number: 8080
       - path: /v1/(.*)
+        pathType: Prefix
         backend:
-          serviceName: web-v1
-          servicePort: 8080
+          service:
+            name: web-v1
+            port:
+              number: 8080

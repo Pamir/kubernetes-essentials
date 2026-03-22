@@ -25,7 +25,8 @@ spec:
       storage: 10Gi
 ---
 
-apiVersion: extensions/v1beta1
+# NFS volume deployment example
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-pd

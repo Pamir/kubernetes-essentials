@@ -1,4 +1,6 @@
-apiVersion: batch/v1beta1
+# Simple CronJob that runs every minute
+# CronJobs are useful for running scheduled tasks
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: hello

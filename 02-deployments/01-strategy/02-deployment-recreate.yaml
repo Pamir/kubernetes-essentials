@@ -1,4 +1,6 @@
-apiVersion: extensions/v1beta1
+# Deployment with Recreate strategy
+# This strategy kills all existing pods before creating new ones
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -16,8 +18,10 @@ spec:
       operator: In
       values:
       - frontend
+  # Recreate strategy: terminates all existing pods before creating new ones
+  # This causes downtime but ensures no mixed versions run simultaneously
   strategy:
-    type: Recreate
+    type: Recreate  # No rolling update configuration needed
   template:
     metadata:
       labels:

@@ -1,0 +1,117 @@
+---
+# Pod Security Context Example - Restricted Security Configuration
+# This pod follows security best practices with restrictive settings
+# Suitable for production workloads that don't require elevated privileges
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-web-app
+  namespace: production
+  labels:
+    app: web-app
+    security-level: restricted
+spec:
+  # Pod-level security context applies to all containers unless overridden
+  securityContext:
+    # Run as non-root user (security best practice)
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    
+    # Use a non-privileged user namespace (when available)
+    # fsGroup: 1000  # Uncomment if using volumes that need group access
+    
+    # Set filesystem group for volume permissions
+    fsGroup: 1000
+    
+    # Secure computing mode - restrict system calls
+    seccompProfile:
+      type: RuntimeDefault  # Use container runtime's default seccomp profile
+    
+    # Supplemental groups (if needed)
+    supplementalGroups: [1000]
+  
+  containers:
+  - name: web-server
+    image: nginx:1.25-alpine
+    
+    # Container-level security context (overrides pod-level for this container)
+    securityContext:
+      # Capabilities control Linux kernel capabilities
+      capabilities:
+        # Drop all capabilities by default
+        drop:
+        - ALL
+        # Only add back specific capabilities if absolutely needed
+        # add:
+        # - NET_BIND_SERVICE  # Uncomment if need to bind to ports < 1024
+      
+      # Make root filesystem read-only (prevents runtime modifications)
+      readOnlyRootFilesystem: true
+      
+      # Don't allow privilege escalation
+      allowPrivilegeEscalation: false
+      
+      # Don't run as privileged container
+      privileged: false
+      
+      # Run as specific user (can override pod-level setting)
+      runAsUser: 101  # nginx user
+      runAsGroup: 101
+      runAsNonRoot: true
+    
+    ports:
+    - containerPort: 8080  # Use unprivileged port
+    
+    # Volume mounts for writable directories (since root FS is read-only)
+    volumeMounts:
+    - name: nginx-cache
+      mountPath: /var/cache/nginx
+    - name: nginx-pid
+      mountPath: /var/run
+    - name: tmp-volume
+      mountPath: /tmp
+    
+    # Resource limits prevent resource exhaustion attacks
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    
+    # Health checks
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  
+  # Volumes for writable directories
+  volumes:
+  - name: nginx-cache
+    emptyDir: {}
+  - name: nginx-pid
+    emptyDir: {}
+  - name: tmp-volume
+    emptyDir: {}
+  
+  # Restart policy
+  restartPolicy: Always
+  
+  # Node selection (security consideration - don't run on edge/less secure nodes)
+  nodeSelector:
+    node.kubernetes.io/instance-type: "secure-instance"
+  
+  # Tolerations and affinity can be used for security zoning
+  # tolerations: []
+  # affinity: {}

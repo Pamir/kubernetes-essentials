@@ -1,0 +1,158 @@
+---
+# Namespace with Automatic Sidecar Injection
+# When istio-injection=enabled label is present, Istio automatically injects
+# Envoy sidecar containers into all pods created in this namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    # Enable automatic sidecar injection for all pods in this namespace
+    istio-injection: enabled
+    
+    # Optional: Additional labels for organization
+    environment: production
+    team: backend
+  annotations:
+    # Documentation about the namespace
+    description: "Production namespace with Istio service mesh enabled"
+
+---
+# Development Namespace with Sidecar Injection
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development  
+  labels:
+    istio-injection: enabled
+    environment: development
+    team: development
+
+---
+# Namespace without Sidecar Injection (for system components)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # Explicitly disable injection for monitoring tools that shouldn't be meshed
+    istio-injection: disabled
+    environment: infrastructure
+    component: monitoring
+
+---
+# Example Pod in Istio-enabled Namespace
+# This pod will automatically get an istio-proxy sidecar container
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-app
+  namespace: production
+  labels:
+    app: web-app
+    version: v1
+spec:
+  containers:
+  - name: web-app
+    image: nginx:1.25
+    ports:
+    - containerPort: 80
+      name: http
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# When this pod is created in the 'production' namespace:
+# 1. Istio admission webhook intercepts the pod creation
+# 2. Adds istio-proxy sidecar container automatically  
+# 3. Configures init containers for network setup
+# 4. The pod will have 2 containers: web-app + istio-proxy
+
+---
+# Pod with Manual Sidecar Injection Control
+# You can override namespace-level injection on individual pods
+apiVersion: v1
+kind: Pod
+metadata:
+  name: legacy-app
+  namespace: production
+  annotations:
+    # Disable sidecar injection for this specific pod
+    # Useful for legacy applications that don't work with service mesh
+    sidecar.istio.io/inject: "false"
+  labels:
+    app: legacy-app
+spec:
+  containers:
+  - name: legacy-app
+    image: old-legacy-app:1.0
+    ports:
+    - containerPort: 8080
+
+---
+# Deployment with Sidecar Injection
+# All pods created by this deployment will get sidecars automatically
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-server
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: api-server
+        version: v1
+      annotations:
+        # Optional: Configure sidecar resource limits
+        sidecar.istio.io/proxyCPU: "100m"
+        sidecar.istio.io/proxyMemory: "128Mi"
+        sidecar.istio.io/proxyCPULimit: "200m"
+        sidecar.istio.io/proxyMemoryLimit: "256Mi"
+    spec:
+      containers:
+      - name: api-server
+        image: api-server:v1.2.3
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1
+            memory: 1Gi
+
+# Sidecar Injection Behavior:
+# 
+# ✅ Enabled when:
+# - Namespace has label istio-injection=enabled
+# - Pod doesn't have annotation sidecar.istio.io/inject=false
+# - Webhook is functioning properly
+# 
+# ❌ Disabled when:  
+# - Namespace has label istio-injection=disabled
+# - Pod has annotation sidecar.istio.io/inject=false
+# - Pod is in kube-system or istio-system namespace (by default)
+# 
+# What gets injected:
+# - istio-proxy sidecar container (Envoy proxy)
+# - istio-init init container (sets up iptables rules)
+# - Additional volumes and volume mounts
+# - Environment variables for proxy configuration
+# 
+# Verifying injection:
+# kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].name}{"\n"}{end}'
+# kubectl describe pod <pod-name> | grep istio-proxy

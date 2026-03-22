@@ -1,3 +1,5 @@
+# NodePort Service - Exposes service on each node's IP at a static port
+# Accessible from outside the cluster via <NodeIP>:<NodePort>
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,12 +9,12 @@ metadata:
   name: frontend
 spec:
   ports:
-  - port: 80
+  - port: 80  # Service port
     protocol: TCP
-    targetPort: 80
-  selector:
+    targetPort: 80  # Port on the pod containers
+  selector:  # Selects pods with these labels
     app: guestbook
     tier: frontend
-  sessionAffinity: None
-  type: NodePort
+  sessionAffinity: None  # No session stickiness
+  type: NodePort  # Exposes service on static port on each node
  

@@ -1,4 +1,6 @@
-apiVersion: extensions/v1beta1
+# Deployment with Rolling Update strategy
+# This demonstrates the default rolling update deployment strategy
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -10,16 +12,18 @@ spec:
   progressDeadlineSeconds: 600
   replicas: 10
   revisionHistoryLimit: 10
+  # Selector to match pods managed by this deployment
   selector:
     matchExpressions:
     - key: tier
       operator: In
       values:
       - frontend
+  # Rolling Update strategy: gradually replaces old pods with new ones
   strategy:
     rollingUpdate:
-      maxSurge: 100%
-      maxUnavailable: 25%
+      maxSurge: 100%  # Max pods above desired replicas during update
+      maxUnavailable: 25%  # Max pods unavailable during update
     type: RollingUpdate
   template:
     metadata:

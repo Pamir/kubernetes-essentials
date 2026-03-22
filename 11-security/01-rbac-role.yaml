@@ -1,0 +1,60 @@
+---
+# RBAC Role Example - Namespace-scoped permissions
+# Roles define permissions within a specific namespace
+# Use Roles for namespace-level access control
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  # Role is namespace-scoped, so it only applies within this namespace
+  namespace: development
+  name: pod-reader
+  labels:
+    app: rbac-example
+spec:
+  # Rules define what actions are allowed on which resources
+  rules:
+  # Allow reading pods in this namespace
+  - apiGroups: [""]  # Core API group (pods, services, configmaps, etc.)
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+    
+  # Allow reading pod logs for debugging
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+    
+  # Allow reading ConfigMaps and Secrets
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list"]
+    
+  # Allow reading services and endpoints
+  - apiGroups: [""]
+    resources: ["services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+    
+  # Allow reading deployments (apps API group)
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+
+---
+# Example of resource name restrictions
+# You can restrict access to specific resources by name
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: development
+  name: specific-pod-reader
+spec:
+  rules:
+  # Only allow access to pods with specific names
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+    resourceNames: ["web-app-pod", "database-pod"]  # Restrict to specific pods
+    
+  # Allow access to all ConfigMaps (no resourceNames restriction)
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]

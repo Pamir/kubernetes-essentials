@@ -1,0 +1,52 @@
+---
+# RBAC RoleBinding Example - Bind Role to Users/Groups/ServiceAccounts
+# RoleBindings grant the permissions defined in a Role to subjects (users, groups, service accounts)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods-binding
+  namespace: development
+  labels:
+    app: rbac-example
+subjects:
+# Bind to a specific user (human user authenticated via OIDC, certificates, etc.)
+- kind: User
+  name: developer-alice
+  apiGroup: rbac.authorization.k8s.io
+  
+# Bind to a group (useful for teams)
+- kind: Group
+  name: development-team
+  apiGroup: rbac.authorization.k8s.io
+  
+# Bind to a ServiceAccount (for pods/applications)
+- kind: ServiceAccount
+  name: web-app-service-account
+  namespace: development  # ServiceAccount namespace must match RoleBinding namespace
+
+roleRef:
+  # Reference the Role to bind
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Example: Binding ClusterRole to namespace (common pattern)
+# You can bind a ClusterRole to a specific namespace using RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: admin-binding
+  namespace: development
+subjects:
+- kind: User
+  name: team-lead-bob
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # Reference a built-in ClusterRole
+  kind: ClusterRole
+  name: admin  # Built-in admin ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  
+# This gives team-lead-bob admin permissions ONLY in the development namespace
+# Even though 'admin' is a ClusterRole, the RoleBinding limits it to this namespace

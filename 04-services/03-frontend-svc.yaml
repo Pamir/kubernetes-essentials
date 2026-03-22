@@ -1,3 +1,5 @@
+# ClusterIP Service - Internal cluster communication only
+# This is the default service type, accessible only within the cluster
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,11 +9,11 @@ metadata:
   name: frontend
 spec:
   ports:
-  - port: 80
+  - port: 80  # Service port
     protocol: TCP
-    targetPort: 80
-  selector:
+    targetPort: 80  # Port on the pod containers
+  selector:  # Selects pods with these labels
     app: guestbook
     tier: frontend
-  sessionAffinity: None
-  type: ClusterIP
+  sessionAffinity: None  # No session stickiness
+  type: ClusterIP  # Internal cluster IP only

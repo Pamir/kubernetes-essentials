@@ -1,0 +1,171 @@
+---
+# LimitRange Example - Default Resource Limits for Containers
+# LimitRange sets default, minimum, and maximum resource constraints for containers/pods
+# Works at the individual container level (complements ResourceQuota which is namespace-level)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: container-limit-range
+  namespace: production
+  labels:
+    resource-type: container-limits
+spec:
+  limits:
+  # Limits for individual containers
+  - type: Container
+    # Default resource requests (if not specified in pod spec)
+    default:
+      cpu: 200m
+      memory: 256Mi
+    
+    # Default resource limits (if not specified in pod spec)  
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    
+    # Maximum allowed for any single container
+    max:
+      cpu: "2"
+      memory: 4Gi
+    
+    # Minimum required for any single container
+    min:
+      cpu: 50m
+      memory: 64Mi
+    
+    # Maximum ratio between limit and request (limit/request)
+    # Prevents containers from requesting tiny amounts but having huge limits
+    maxLimitRequestRatio:
+      cpu: "4"      # CPU limit can be at most 4x the CPU request
+      memory: "2"   # Memory limit can be at most 2x the memory request
+
+---
+# LimitRange for Pods (Total pod resources)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: pod-limit-range
+  namespace: production
+spec:
+  limits:
+  # Limits for entire pods (sum of all containers)
+  - type: Pod
+    max:
+      cpu: "4"      # Total pod CPU cannot exceed 4 cores
+      memory: 8Gi   # Total pod memory cannot exceed 8GB
+    min:
+      cpu: 100m     # Total pod CPU must be at least 100m
+      memory: 128Mi # Total pod memory must be at least 128Mi
+
+---
+# LimitRange for Persistent Volume Claims
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: pvc-limit-range
+  namespace: production
+spec:
+  limits:
+  - type: PersistentVolumeClaim
+    max:
+      storage: 10Gi  # Individual PVC cannot exceed 10GB
+    min:
+      storage: 1Gi   # Individual PVC must be at least 1GB
+
+---
+# Development Environment LimitRange (More Flexible)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: dev-container-limits
+  namespace: development
+spec:
+  limits:
+  - type: Container
+    # Smaller defaults for development
+    default:
+      cpu: 100m
+      memory: 128Mi
+    defaultRequest:
+      cpu: 50m
+      memory: 64Mi
+    
+    # Lower maximum limits
+    max:
+      cpu: "1"
+      memory: 2Gi
+    min:
+      cpu: 10m
+      memory: 32Mi
+    
+    # More flexible ratios for development/testing
+    maxLimitRequestRatio:
+      cpu: "10"
+      memory: "4"
+
+---
+# Production Environment LimitRange (Strict)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: prod-strict-limits
+  namespace: production
+spec:
+  limits:
+  - type: Container
+    # Higher defaults for production workloads
+    default:
+      cpu: 500m
+      memory: 512Mi
+    defaultRequest:
+      cpu: 200m
+      memory: 256Mi
+    
+    # Conservative maximums to prevent resource hogging
+    max:
+      cpu: "2"
+      memory: 4Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+    
+    # Tight ratios to prevent over-allocation
+    maxLimitRequestRatio:
+      cpu: "2"
+      memory: "1.5"
+
+# LimitRange Behavior:
+# 
+# 1. **Default Injection**: If pod doesn't specify resources, defaults are applied
+# 2. **Validation**: Pod creation fails if limits violate LimitRange constraints
+# 3. **Admission Control**: Enforced at pod admission time, not runtime
+# 4. **Namespace Scoped**: Each namespace can have its own LimitRange
+# 
+# LimitRange vs ResourceQuota:
+# 
+# | Aspect | LimitRange | ResourceQuota |
+# |--------|------------|---------------|
+# | **Scope** | Individual containers/pods | Total namespace resources |
+# | **Purpose** | Set defaults, prevent extremes | Control total consumption |
+# | **When Applied** | Pod creation | Resource allocation |
+# | **Granularity** | Per-object limits | Aggregate limits |
+# 
+# Best Practices:
+# 
+# 1. **Use Together**: LimitRange + ResourceQuota provide complete resource governance
+# 2. **Environment-Specific**: Different limits for dev/test/prod environments
+# 3. **Reasonable Defaults**: Set sensible defaults that work for most applications
+# 4. **Monitor Usage**: Adjust limits based on actual application requirements
+# 5. **Documentation**: Document resource requirements for development teams
+# 
+# Common Issues:
+# 
+# 1. **Overly Restrictive**: Limits prevent legitimate workloads from running
+# 2. **Missing Requests**: Pods without requests get defaults (may be too high/low)
+# 3. **Ratio Violations**: Limits too high relative to requests
+# 4. **PVC Sizing**: Storage limits preventing necessary volume creation
+# 
+# Troubleshooting:
+# kubectl describe limitrange container-limit-range -n production
+# kubectl get events --field-selector reason=LimitRangeViolation
+# kubectl describe pod <failing-pod> # Check for limit-related errors

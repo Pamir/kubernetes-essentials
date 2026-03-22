@@ -1,4 +1,12 @@
+# Security files
 **/*.tls
 **/*.crt
 **/*.key
+
+# Editor files
 **/.vscode
+*.swp
+.DS_Store
+
+# Backup files
+*.bak

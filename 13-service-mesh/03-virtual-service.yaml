@@ -1,0 +1,185 @@
+---
+# VirtualService Example - Traffic Routing and Canary Deployment
+# VirtualService defines routing rules for how requests are routed to services
+# This example shows a canary deployment: 90% traffic to v1, 10% to v2
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-server-vs
+  namespace: production
+spec:
+  # Hosts this VirtualService applies to
+  # Can be service names, external hosts, or wildcard patterns
+  hosts:
+  - api-server              # Internal service name
+  - api.example.com         # External hostname (requires Gateway)
+  
+  # Optional: Apply rules only to specific gateways
+  # gateways:
+  # - api-gateway
+  
+  # HTTP routing rules
+  http:
+  # Rule 1: Route based on headers (feature flags, user segments)
+  - match:
+    - headers:
+        user-type:
+          exact: premium
+    route:
+    - destination:
+        host: api-server
+        subset: v2    # Premium users get the new version
+      weight: 100
+    # Optional: Modify requests/responses
+    rewrite:
+      authority: api-v2.example.com
+    headers:
+      request:
+        add:
+          x-user-tier: premium
+  
+  # Rule 2: Canary deployment - 90% v1, 10% v2
+  - match:
+    - uri:
+        prefix: "/api/v1"
+    route:
+    # 90% of traffic to stable version
+    - destination:
+        host: api-server
+        subset: v1
+      weight: 90
+    # 10% of traffic to canary version  
+    - destination:
+        host: api-server
+        subset: v2
+      weight: 10
+    
+    # Traffic policies for this route
+    timeout: 10s
+    retries:
+      attempts: 3
+      perTryTimeout: 3s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    
+    # Fault injection for testing
+    fault:
+      delay:
+        percentage:
+          value: 0.1  # 0.1% of requests
+        fixedDelay: 5s
+  
+  # Rule 3: Route specific paths to different services
+  - match:
+    - uri:
+        prefix: "/api/auth"
+    route:
+    - destination:
+        host: auth-service
+        port:
+          number: 8080
+  
+  # Rule 4: Default route (catch-all)
+  - route:
+    - destination:
+        host: api-server
+        subset: v1
+      weight: 100
+
+---
+# VirtualService for External Traffic (requires Gateway)
+apiVersion: networking.istio.io/v1beta1  
+kind: VirtualService
+metadata:
+  name: api-external-vs
+  namespace: production
+spec:
+  hosts:
+  - api.example.com
+  gateways:
+  - api-gateway
+  http:
+  # HTTPS redirect
+  - match:
+    - port: 80
+    redirect:
+      port: 443
+      scheme: https
+  
+  # Secure traffic routing
+  - match:
+    - port: 443
+    route:
+    - destination:
+        host: api-server
+        subset: v1
+
+---
+# Advanced VirtualService - A/B Testing
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService  
+metadata:
+  name: web-app-ab-test
+  namespace: production
+spec:
+  hosts:
+  - web-app
+  http:
+  # A/B test based on cookie
+  - match:
+    - headers:
+        cookie:
+          regex: "^(.*?;)?(version=beta)(;.*)?$"
+    route:
+    - destination:
+        host: web-app
+        subset: beta
+  
+  # Geographic routing
+  - match:
+    - headers:
+        x-user-region:
+          exact: us-east
+    route:
+    - destination:
+        host: web-app
+        subset: us-east
+  
+  # Default routing
+  - route:
+    - destination:
+        host: web-app
+        subset: stable
+
+# VirtualService Routing Capabilities:
+# 
+# **Match Conditions:**
+# - URI: exact, prefix, regex patterns
+# - Headers: exact, regex matching  
+# - Query parameters: exact, regex
+# - Method: GET, POST, PUT, etc.
+# - Authority: hostname matching
+# - Source labels: route based on calling service
+# 
+# **Traffic Splitting:**
+# - Weight-based: percentage of traffic to each destination
+# - Header-based: route based on request headers
+# - User-based: route based on user identity/segments
+# 
+# **Traffic Modifications:**
+# - Rewrite: change URI, authority
+# - Redirect: HTTP redirects  
+# - Headers: add, remove, modify headers
+# - CORS: cross-origin resource sharing
+# 
+# **Resilience:**
+# - Timeouts: per-route timeouts
+# - Retries: configurable retry logic
+# - Circuit breaking: combined with DestinationRule
+# - Fault injection: testing failure scenarios
+# 
+# **Common Use Cases:**
+# - Canary deployments (gradual rollout)
+# - A/B testing (feature flags)
+# - Blue-green deployments (instant switch)
+# - Geographic routing (multi-region)
+# - API versioning (backward compatibility)

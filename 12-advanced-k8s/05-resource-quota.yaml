@@ -1,0 +1,158 @@
+---
+# ResourceQuota Example - Namespace Resource Limits
+# ResourceQuota limits the total resource consumption in a namespace
+# Prevents any single namespace from consuming all cluster resources
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: production-resource-quota
+  namespace: production
+  labels:
+    quota-type: resource-limits
+spec:
+  hard:
+    # Compute Resources (total for all pods in namespace)
+    requests.cpu: "10"        # Total CPU requests cannot exceed 10 cores
+    requests.memory: 20Gi     # Total memory requests cannot exceed 20GB
+    limits.cpu: "20"          # Total CPU limits cannot exceed 20 cores  
+    limits.memory: 40Gi       # Total memory limits cannot exceed 40GB
+    
+    # Storage Resources
+    requests.storage: 100Gi   # Total persistent volume claims cannot exceed 100GB
+    
+    # Object Counts (number of objects in namespace)
+    count/pods: 50            # Maximum 50 pods
+    count/services: 10        # Maximum 10 services
+    count/secrets: 20         # Maximum 20 secrets
+    count/configmaps: 15      # Maximum 15 configmaps
+    count/persistentvolumeclaims: 10  # Maximum 10 PVCs
+    
+    # Specific Resource Types
+    count/deployments.apps: 15           # Maximum 15 deployments
+    count/statefulsets.apps: 5           # Maximum 5 statefulsets
+    count/jobs.batch: 10                 # Maximum 10 jobs
+    count/cronjobs.batch: 5              # Maximum 5 cronjobs
+    
+    # Load Balancer Services (often costly)
+    count/services.loadbalancers: 2      # Maximum 2 LoadBalancer services
+    
+    # Ingress Resources
+    count/ingresses.networking.k8s.io: 5 # Maximum 5 ingress objects
+
+---
+# ResourceQuota with Scopes - Different Limits for Different Pod Types
+# Scopes allow different quota rules for different categories of pods
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: development-compute-quota
+  namespace: development
+spec:
+  hard:
+    requests.cpu: "5"
+    requests.memory: 10Gi
+  # Apply only to non-terminal pods (running pods)
+  scopes: ["NotTerminating"]
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: development-job-quota
+  namespace: development
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+  # Apply only to pods that will terminate (Jobs, CronJobs)
+  scopes: ["Terminating"]
+
+---
+# ResourceQuota for Different Priority Classes
+# Different resource limits based on workload priority
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: high-priority-quota
+  namespace: production
+spec:
+  hard:
+    requests.cpu: "15"
+    requests.memory: 30Gi
+  # Apply to high-priority workloads
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: ["high-priority"]
+
+---
+# Development Environment Quota (More Permissive)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-resource-quota
+  namespace: development
+spec:
+  hard:
+    # Lower limits for development
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    
+    # Storage limits
+    requests.storage: 50Gi
+    
+    # Object limits
+    count/pods: 25
+    count/services: 8
+    count/deployments.apps: 10
+    
+    # No LoadBalancer services in dev
+    count/services.loadbalancers: 0
+
+---
+# Testing Environment Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: test-resource-quota
+  namespace: testing
+spec:
+  hard:
+    requests.cpu: "6"
+    requests.memory: 12Gi
+    limits.cpu: "12" 
+    limits.memory: 24Gi
+    requests.storage: 75Gi
+    
+    # Allow more pods for testing scenarios
+    count/pods: 40
+    count/services: 12
+    count/deployments.apps: 15
+    count/jobs.batch: 20  # More jobs for test runs
+
+# ResourceQuota Notes:
+# 
+# 1. **Enforcement**: Quota is enforced at pod creation time
+# 2. **Requires LimitRange**: Should be paired with LimitRange for individual pod limits
+# 3. **API Server Check**: API server rejects requests that exceed quota
+# 4. **Resource Requests Required**: Pods must have resource requests when quota is active
+# 5. **Scope Precedence**: More specific scopes override general ones
+# 
+# Available Scopes:
+# - Terminating: Pods with activeDeadlineSeconds (Jobs, CronJobs)
+# - NotTerminating: Long-running pods (Deployments, StatefulSets)
+# - BestEffort: Pods without resource requests/limits
+# - NotBestEffort: Pods with resource requests/limits
+# - PriorityClass: Pods with specific priority class
+# 
+# Monitoring ResourceQuota:
+# kubectl describe quota production-resource-quota -n production
+# kubectl get quota --all-namespaces
+# 
+# Common Issues:
+# 1. Pods stuck pending due to quota exceeded
+# 2. Developers unable to create resources
+# 3. Need to adjust quotas based on actual usage patterns

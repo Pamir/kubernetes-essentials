@@ -1,0 +1,50 @@
+---
+# NetworkPolicy Example - Default Deny All Ingress
+# This policy blocks all incoming traffic to pods in the namespace
+# Use as a security baseline - then add specific allow policies as needed
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: production
+  labels:
+    policy-type: security-baseline
+spec:
+  # Apply to all pods in the namespace
+  podSelector: {}
+  
+  # Policy types that this NetworkPolicy applies to
+  policyTypes:
+  - Ingress
+  
+  # Empty ingress rules means no ingress traffic is allowed
+  # This creates a default-deny policy for all pods in the namespace
+  ingress: []
+
+---
+# NetworkPolicy Example - Default Deny All (Ingress + Egress)
+# More restrictive - blocks both incoming and outgoing traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: secure-zone
+spec:
+  # Apply to all pods in the namespace
+  podSelector: {}
+  
+  # Apply to both ingress and egress traffic
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # No rules defined = deny all traffic
+  ingress: []
+  egress: []
+
+# Important Notes:
+# 1. NetworkPolicies are additive - multiple policies can apply to the same pod
+# 2. If no NetworkPolicy selects a pod, all traffic is allowed (default behavior)
+# 3. Once ANY NetworkPolicy selects a pod, only explicitly allowed traffic is permitted
+# 4. Requires a CNI that supports NetworkPolicy (Calico, Cilium, Weave, etc.)
+# 5. Does not affect traffic to/from the node where pods are running

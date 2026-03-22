@@ -1,0 +1,72 @@
+---
+# NetworkPolicy Example - Allow Frontend to Backend Communication
+# This policy allows traffic from frontend pods to backend pods on specific ports
+# Demonstrates label-based pod selection and port restrictions
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: production
+  labels:
+    policy-type: application-access
+spec:
+  # Apply this policy to pods with label app=backend
+  podSelector:
+    matchLabels:
+      app: backend
+  
+  policyTypes:
+  - Ingress
+  
+  ingress:
+  # Rule 1: Allow traffic from frontend pods
+  - from:
+    # Select pods in the same namespace with label app=frontend
+    - podSelector:
+        matchLabels:
+          app: frontend
+    # Allow traffic on port 8080 (HTTP API)
+    ports:
+    - protocol: TCP
+      port: 8080
+    
+  # Rule 2: Allow health checks from monitoring system
+  - from:
+    - podSelector:
+        matchLabels:
+          app: monitoring
+    # Allow traffic on port 8081 (health/metrics endpoint)
+    ports:
+    - protocol: TCP
+      port: 8081
+
+---
+# NetworkPolicy Example - Cross-Namespace Access
+# Allow traffic from pods in one namespace to pods in another namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cross-namespace-api
+  namespace: backend-services
+spec:
+  # Apply to API pods in this namespace
+  podSelector:
+    matchLabels:
+      app: api-server
+  
+  policyTypes:
+  - Ingress
+  
+  ingress:
+  - from:
+    # Allow traffic from web-frontend namespace
+    - namespaceSelector:
+        matchLabels:
+          name: web-frontend
+      # AND from pods with specific label
+      podSelector:
+        matchLabels:
+          component: web-server
+    ports:
+    - protocol: TCP
+      port: 443

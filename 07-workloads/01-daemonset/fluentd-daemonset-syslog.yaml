@@ -9,7 +9,8 @@ metadata:
     version: v1
 
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+# RBAC ClusterRole for Fluentd DaemonSet
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: fluentd
@@ -26,8 +27,8 @@ rules:
   - watch
 
 ---
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+# ClusterRoleBinding for Fluentd DaemonSet
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: fluentd
 roleRef:

@@ -1,0 +1,126 @@
+---
+# HPA with Custom Metrics - Advanced Scaling
+# This example shows scaling based on custom application metrics
+# Requires a custom metrics adapter (Prometheus, Datadog, etc.)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-server-hpa-custom
+  namespace: production
+  labels:
+    app: api-server
+    scaling-type: custom-metrics
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-server-deployment
+  
+  minReplicas: 3
+  maxReplicas: 20
+  
+  metrics:
+  # Custom metric: requests per second
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+        selector:
+          matchLabels:
+            app: api-server
+      target:
+        type: AverageValue
+        averageValue: "100"  # Scale when RPS > 100 per pod
+  
+  # Custom metric: queue depth (for background workers)
+  - type: Object
+    object:
+      metric:
+        name: queue_depth
+        selector:
+          matchLabels:
+            queue: "background-jobs"
+      target:
+        type: Value
+        value: "50"  # Scale when queue has > 50 items
+      describedObject:
+        apiVersion: v1
+        kind: Service
+        name: redis-queue-service
+  
+  # External metric: AWS SQS queue length
+  - type: External
+    external:
+      metric:
+        name: sqs_queue_length
+        selector:
+          matchLabels:
+            queue-name: "production-jobs"
+      target:
+        type: Value
+        value: "10"  # Scale when SQS queue > 10 messages
+  
+  # CPU as fallback (if custom metrics unavailable)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  
+  behavior:
+    scaleUp:
+      # More aggressive scaling for traffic spikes
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Pods
+        value: 4
+        periodSeconds: 60
+      - type: Percent
+        value: 100    # Double the replicas if needed
+        periodSeconds: 60
+      selectPolicy: Max
+    
+    scaleDown:
+      # Conservative scale-down to avoid thrashing
+      stabilizationWindowSeconds: 600  # Wait 10 minutes
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 180   # Remove 1 pod every 3 minutes
+      selectPolicy: Min
+
+---
+# ServiceMonitor for Prometheus (if using Prometheus Operator)
+# This tells Prometheus to scrape metrics from your application
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-server-metrics
+  namespace: production
+  labels:
+    app: api-server
+spec:
+  selector:
+    matchLabels:
+      app: api-server
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Notes:
+# 1. Custom metrics require a metrics adapter:
+#    - Prometheus Adapter (most common)
+#    - Datadog Cluster Agent
+#    - Azure Monitor Adapter
+#    - Google Cloud Monitoring
+# 
+# 2. Your application must expose metrics in the expected format
+# 
+# 3. Metric types:
+#    - Resource: CPU, memory (built-in)
+#    - Pods: Per-pod metrics from custom metrics API
+#    - Object: Single object metrics (Service, Ingress, etc.)
+#    - External: External system metrics (cloud services)

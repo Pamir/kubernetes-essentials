@@ -1,20 +1,22 @@
+# Basic Pod example demonstrating a simple containerized application
+# Pods are the smallest deployable unit in Kubernetes
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    run: kuard
+    run: kuard  # Label for selecting this pod
     name: kuard
-    internalVersion: 0.0.2
-  name: kuard
+    internalVersion: 0.0.2  # Custom metadata label
+  name: kuard  # Pod name (must be unique in namespace)
 spec:
   containers:
-  - image: gcr.io/kuar-demo/kuard-amd64:1
-    imagePullPolicy: IfNotPresent
-    name: kuard
+  - image: gcr.io/kuar-demo/kuard-amd64:1  # Container image to run
+    imagePullPolicy: IfNotPresent  # Pull image only if not present locally
+    name: kuard  # Container name within the pod
     ports:
-    - containerPort: 8080
-      name: http
-      protocol: TCP
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Never
+    - containerPort: 8080  # Port the container exposes
+      name: http  # Named port for service reference
+      protocol: TCP  # Protocol (TCP/UDP)
+    resources: {}  # Resource requests/limits (empty = no constraints)
+  dnsPolicy: ClusterFirst  # Use cluster's DNS service
+  restartPolicy: Never  # Pod restart policy (Always/OnFailure/Never)

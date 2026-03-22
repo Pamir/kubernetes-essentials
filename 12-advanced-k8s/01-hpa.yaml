@@ -1,0 +1,99 @@
+---
+# HorizontalPodAutoscaler (HPA) Example - CPU-based Scaling
+# HPA automatically scales the number of pods in a deployment based on metrics
+# This example scales based on CPU utilization
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-app-hpa
+  namespace: production
+  labels:
+    app: web-application
+spec:
+  # Target deployment to scale
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-app-deployment
+  
+  # Scaling limits
+  minReplicas: 2    # Always keep at least 2 pods
+  maxReplicas: 10   # Never scale beyond 10 pods
+  
+  # Metrics to use for scaling decisions
+  metrics:
+  # CPU utilization metric
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50  # Scale up when average CPU > 50%
+  
+  # Memory utilization metric (optional)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70  # Scale up when average memory > 70%
+  
+  # Scaling behavior configuration (fine-tune scaling speed)
+  behavior:
+    scaleUp:
+      # How fast to scale up
+      stabilizationWindowSeconds: 60    # Wait 60s before another scale-up
+      policies:
+      - type: Pods
+        value: 2              # Add max 2 pods at a time
+        periodSeconds: 60     # Every 60 seconds
+      - type: Percent
+        value: 50             # Or increase by max 50%
+        periodSeconds: 60
+      selectPolicy: Max       # Use the policy that adds more pods
+    
+    scaleDown:
+      # How fast to scale down (more conservative)
+      stabilizationWindowSeconds: 300   # Wait 5 minutes before scale-down
+      policies:
+      - type: Pods
+        value: 1              # Remove max 1 pod at a time
+        periodSeconds: 60     # Every 60 seconds
+      - type: Percent
+        value: 10             # Or decrease by max 10%
+        periodSeconds: 60
+      selectPolicy: Min       # Use the policy that removes fewer pods
+
+---
+# Requirements for HPA to work:
+# 1. Metrics Server must be installed in the cluster
+# 2. Target deployment must have resource requests defined
+# 3. Pods must be running and ready
+
+# Example target deployment (for reference)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app-deployment
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: web-app
+        image: nginx:1.25
+        resources:
+          # REQUIRED: HPA needs resource requests to calculate utilization
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi

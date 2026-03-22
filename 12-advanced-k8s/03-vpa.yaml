@@ -1,0 +1,133 @@
+---
+# VerticalPodAutoscaler (VPA) Example
+# VPA automatically adjusts CPU and memory requests/limits for containers
+# Helps right-size workloads to optimize resource usage and costs
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: web-app-vpa
+  namespace: production
+  labels:
+    app: web-application
+spec:
+  # Target workload to monitor and adjust
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-app-deployment
+  
+  # Update mode controls how VPA applies recommendations:
+  # - "Off": Only provides recommendations, no automatic updates
+  # - "Auto": Automatically updates resource requests and recreates pods
+  # - "Recreation": Updates requests but requires pod restart (legacy mode)
+  # - "Initial": Only sets resources for new pods, doesn't update existing ones
+  updatePolicy:
+    updateMode: "Auto"
+    
+    # Optional: Specify which containers to manage
+    # containerPolicies:
+    # - containerName: web-app
+    #   mode: Auto
+    #   minAllowed:
+    #     cpu: 100m
+    #     memory: 128Mi
+    #   maxAllowed:
+    #     cpu: 2
+    #     memory: 4Gi
+  
+  # Resource policy defines bounds and scaling behavior
+  resourcePolicy:
+    containerPolicies:
+    - containerName: web-app
+      # Minimum resources that VPA can recommend
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      
+      # Maximum resources that VPA can recommend
+      maxAllowed:
+        cpu: 1
+        memory: 2Gi
+      
+      # Which resources VPA can modify
+      controlledResources: ["cpu", "memory"]
+      
+      # Scaling mode for each resource type
+      controlledValues: RequestsAndLimits  # Options: RequestsAndLimits, RequestsOnly
+
+---
+# VPA in Recommendation Mode (Safe for Production)
+# This mode only provides recommendations without making changes
+# Good for understanding resource usage patterns before enabling auto-scaling
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: database-vpa-recommendations
+  namespace: production
+  labels:
+    app: database
+    vpa-mode: recommendation-only
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: database-statefulset
+  
+  # Recommendation mode - safe for production
+  updatePolicy:
+    updateMode: "Off"  # Only generate recommendations
+  
+  resourcePolicy:
+    containerPolicies:
+    - containerName: postgres
+      minAllowed:
+        cpu: 100m
+        memory: 256Mi
+      maxAllowed:
+        cpu: 4
+        memory: 8Gi
+      controlledResources: ["cpu", "memory"]
+
+---
+# Example target deployment (for reference)
+# VPA requires the deployment to have resource requests defined
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app-deployment
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: web-app
+        image: nginx:1.25
+        resources:
+          # Initial resource requests (VPA will adjust these)
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+# VPA Requirements:
+# 1. VPA Controller must be installed (not included in standard K8s)
+# 2. Target workload must have resource requests defined
+# 3. Sufficient historical data for accurate recommendations (usually 24-48h)
+# 
+# VPA vs HPA:
+# - VPA: Vertical scaling (adjust resource requests/limits)
+# - HPA: Horizontal scaling (adjust number of replicas)
+# - Can be used together (HPA for quick scaling, VPA for right-sizing)
+# 
+# Viewing VPA Recommendations:
+# kubectl describe vpa web-app-vpa
+# kubectl get vpa web-app-vpa -o yaml

@@ -1,0 +1,96 @@
+---
+# NetworkPolicy Example - Egress Traffic Control
+# Controls outbound traffic from pods - limits what external services pods can reach
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-egress-policy
+  namespace: production
+  labels:
+    policy-type: egress-control
+spec:
+  # Apply to backend pods
+  podSelector:
+    matchLabels:
+      app: backend
+  
+  policyTypes:
+  - Egress
+  
+  egress:
+  # Rule 1: Allow DNS resolution (essential for most applications)
+  - to: []  # Allow to any destination
+    ports:
+    - protocol: UDP
+      port: 53    # DNS
+    - protocol: TCP
+      port: 53    # DNS over TCP
+  
+  # Rule 2: Allow access to database in the same namespace
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+  
+  # Rule 3: Allow HTTPS to external APIs (by IP range)
+  - to:
+    # Allow access to specific IP ranges (e.g., AWS services, external APIs)
+    - ipBlock:
+        cidr: 52.0.0.0/8        # AWS IP range example
+        except:
+        - 52.95.0.0/16          # Exclude specific subnet
+  
+    ports:
+    - protocol: TCP
+      port: 443   # HTTPS
+  
+  # Rule 4: Allow access to internal services by namespace
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: shared-services
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+
+---
+# Egress Policy for Development Environment (More Permissive)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dev-egress-permissive
+  namespace: development
+spec:
+  podSelector:
+    matchLabels:
+      environment: dev
+  
+  policyTypes:
+  - Egress
+  
+  egress:
+  # Allow DNS
+  - ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # Allow HTTP/HTTPS to internet (for package downloads, APIs, etc.)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+  
+  # Allow SSH for development tools
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 22

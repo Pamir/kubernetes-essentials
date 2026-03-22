@@ -1,0 +1,82 @@
+---
+# Pod Security Standards - Namespace Configuration
+# Kubernetes Pod Security Standards provide three security profiles:
+# - Privileged: Unrestricted (default)
+# - Baseline: Minimally restrictive (prevents known privilege escalations)
+# - Restricted: Heavily restricted (security best practices)
+
+# Namespace with Pod Security Standards enforcement
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secure-production
+  labels:
+    # Pod Security Standard labels configure admission control
+    # Action modes: enforce (blocks), audit (logs), warn (warns user)
+    
+    # Enforce restricted profile - blocks non-compliant pods
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.29
+    
+    # Audit baseline violations - logs but doesn't block
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/audit-version: v1.29
+    
+    # Warn about baseline violations - shows warnings to users
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/warn-version: v1.29
+  
+  annotations:
+    # Documentation about security requirements
+    security.policy/description: "Production namespace with restricted pod security"
+    security.policy/contact: "security-team@company.com"
+
+---
+# Example: Development namespace with baseline security
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+  labels:
+    # Baseline profile for development (less restrictive)
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.29
+    
+    # Still audit and warn for restricted violations
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.29
+    pod-security.kubernetes.io/warn: restricted  
+    pod-security.kubernetes.io/warn-version: v1.29
+
+---
+# Example: Legacy namespace (for migration period)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legacy-apps
+  labels:
+    # Only warn and audit - don't enforce (for gradual migration)
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
+  annotations:
+    security.policy/migration-deadline: "2024-12-31"
+    security.policy/status: "migration-in-progress"
+
+# Pod Security Standard Requirements:
+#
+# Baseline Profile Prohibits:
+# - Privileged containers (privileged: true)
+# - Host networking, PID, or IPC (hostNetwork, hostPID, hostIPC)
+# - Privileged ports (< 1024)
+# - Host path volumes
+# - Adding capabilities beyond baseline set
+# - Running as root in some cases
+#
+# Restricted Profile Additionally Requires:
+# - runAsNonRoot: true
+# - readOnlyRootFilesystem: true
+# - allowPrivilegeEscalation: false
+# - Drop ALL capabilities, only add specific ones if needed
+# - Seccomp profile (RuntimeDefault or Localhost)
+# - Non-root user (runAsUser > 0)

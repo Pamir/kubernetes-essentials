@@ -1,0 +1,167 @@
+---
+# PriorityClass Example - Pod Scheduling Priority
+# PriorityClass defines scheduling priority for pods
+# Higher priority pods can preempt lower priority pods when resources are scarce
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+  labels:
+    priority-tier: critical
+# Priority value (higher = more important)
+# Range: -1000000000 to 1000000000
+# System critical pods typically use values > 1000000000
+value: 1000000
+# Whether this priority class can preempt lower priority pods
+globalDefault: false
+# Human-readable description
+description: "High priority class for critical production workloads"
+
+---
+# System-Critical Priority (Highest)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: system-critical
+value: 2000000000
+globalDefault: false
+description: "System-critical components (DNS, ingress controllers, monitoring)"
+
+---
+# Production Priority (High)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: production-high
+value: 1000000
+globalDefault: false
+description: "High-priority production applications"
+
+---
+# Production Normal Priority (Default for Production)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: production-normal
+value: 100000
+# Make this the default priority for all pods in production
+globalDefault: true
+description: "Normal priority for production workloads"
+
+---
+# Development Priority (Low)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: development
+value: -100
+globalDefault: false
+description: "Development and testing workloads (preemptible)"
+
+---
+# Batch/Background Jobs (Lowest)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: batch-jobs
+value: -1000
+globalDefault: false
+description: "Background batch jobs and non-critical tasks"
+
+---
+# Example Pod using PriorityClass
+apiVersion: v1
+kind: Pod
+metadata:
+  name: critical-app
+  namespace: production
+spec:
+  # Assign priority class to pod
+  priorityClassName: high-priority
+  
+  containers:
+  - name: app
+    image: nginx:1.25
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+---
+# Example Deployment with Priority
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      # Priority class applied to all pods in this deployment
+      priorityClassName: production-high
+      
+      containers:
+      - name: web-app
+        image: nginx:1.25
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+# Priority Class Guidelines:
+# 
+# **Priority Ranges:**
+# - System Critical: 2000000000+ (cluster components)
+# - Production Critical: 1000000-1999999999 (critical apps)
+# - Production Normal: 100000-999999 (regular apps)  
+# - Development: 0-99999 (dev/test workloads)
+# - Batch/Background: < 0 (preemptible jobs)
+# 
+# **Preemption Behavior:**
+# 1. Scheduler tries to find nodes with available resources
+# 2. If no resources available, scheduler looks for lower priority pods to evict
+# 3. Preempted pods get graceful termination (terminationGracePeriodSeconds)
+# 4. High priority pod is scheduled on the freed node
+# 
+# **Best Practices:**
+# 
+# 1. **Establish Hierarchy**: Create clear priority tiers for different workload types
+# 2. **Use Sparingly**: Don't give everything high priority (defeats the purpose)
+# 3. **Resource Requests**: High priority pods should have accurate resource requests
+# 4. **Monitor Preemption**: Watch for excessive preemption events
+# 5. **Graceful Degradation**: Design apps to handle preemption gracefully
+# 
+# **When to Use Priority:**
+# 
+# - **Critical Services**: DNS, ingress controllers, monitoring
+# - **Production Applications**: Customer-facing services
+# - **Resource Contention**: When cluster resources are frequently exhausted
+# - **Mixed Workloads**: Running prod and dev/test in same cluster
+# - **Batch Processing**: Lower priority for background jobs
+# 
+# **Monitoring Priority:**
+# ```bash
+# # View priority classes
+# kubectl get priorityclasses
+# 
+# # Check pod priority
+# kubectl get pods -o custom-columns=NAME:.metadata.name,PRIORITY:.spec.priority,PRIORITY_CLASS:.spec.priorityClassName
+# 
+# # Watch for preemption events  
+# kubectl get events --field-selector reason=Preempted
+# ```
+# 
+# **Common Issues:**
+# 1. **Preemption Loops**: Poorly configured priorities causing constant preemption
+# 2. **Resource Starvation**: Lower priority workloads never getting resources
+# 3. **Over-Prioritization**: Too many high-priority pods reducing effectiveness

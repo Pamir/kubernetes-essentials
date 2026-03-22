@@ -1,4 +1,5 @@
-apiVersion: extensions/v1beta1
+# Contour Ingress example  
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: web-ingress
@@ -9,10 +10,16 @@ spec:
   - http:
       paths:
       - path: /v2
+        pathType: Prefix
         backend:
-          serviceName: web-v2
-          servicePort: http
+          service:
+            name: web-v2
+            port:
+              name: http
       - path: /v1
+        pathType: Prefix
         backend:
-          serviceName: web-v1
-          servicePort: http
+          service:
+            name: web-v1
+            port:
+              name: http

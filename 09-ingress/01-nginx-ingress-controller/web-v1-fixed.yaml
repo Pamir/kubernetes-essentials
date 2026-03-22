@@ -1,4 +1,5 @@
-apiVersion: extensions/v1beta1
+# Web application v1 deployment with health checks
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null

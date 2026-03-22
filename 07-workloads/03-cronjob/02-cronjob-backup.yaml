@@ -1,0 +1,101 @@
+---
+# Production CronJob Example - Database Backup
+# This example shows a more realistic CronJob that performs database backups
+# It includes proper error handling, timeouts, and cleanup policies
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: database-backup
+  namespace: production
+  labels:
+    app: backup-system
+    component: database-backup
+spec:
+  # Run daily at 2:00 AM UTC
+  schedule: "0 2 * * *"
+  timeZone: "UTC"
+  
+  # Don't allow concurrent backup jobs to avoid conflicts
+  concurrencyPolicy: Forbid
+  
+  # Keep last 7 successful backups for history
+  successfulJobsHistoryLimit: 7
+  
+  # Keep last 3 failed attempts for debugging
+  failedJobsHistoryLimit: 3
+  
+  # If no new schedule occurs, suspend the CronJob after this time
+  # This prevents indefinite suspension if the CronJob controller is down
+  startingDeadlineSeconds: 300
+  
+  jobTemplate:
+    spec:
+      # How many times to retry the job on failure before giving up
+      backoffLimit: 2
+      
+      # Maximum time allowed for the job to run (4 hours)
+      # Important for backup jobs that might hang
+      activeDeadlineSeconds: 14400
+      
+      template:
+        metadata:
+          labels:
+            app: backup-system
+            job-type: database-backup
+        spec:
+          restartPolicy: Never
+          
+          # Use a service account with appropriate permissions
+          serviceAccountName: backup-service-account
+          
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            imagePullPolicy: IfNotPresent
+            
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Starting database backup at $(date)"
+              
+              # Perform the backup
+              pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME > /backup/db-backup-$(date +%Y%m%d-%H%M%S).sql
+              
+              echo "Backup completed successfully at $(date)"
+              
+              # Clean up old backups (keep last 30 days)
+              find /backup -name "db-backup-*.sql" -type f -mtime +30 -delete
+              
+              echo "Cleanup completed"
+            
+            env:
+            - name: DB_HOST
+              value: "postgresql-service"
+            - name: DB_USER
+              value: "backup_user"
+            - name: DB_NAME
+              value: "production_db"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backup-credentials
+                  key: password
+            
+            resources:
+              limits:
+                cpu: 500m
+                memory: 1Gi
+              requests:
+                cpu: 100m
+                memory: 256Mi
+            
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc

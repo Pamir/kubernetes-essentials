@@ -1,0 +1,120 @@
+---
+# StatefulSet Example - Nginx with Persistent Storage
+# StatefulSets provide stable network identities and persistent storage for pods
+# Unlike Deployments, pods in StatefulSets have predictable names and startup order
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginx-statefulset
+  namespace: default
+  labels:
+    app: nginx-stateful
+spec:
+  # Must match the headless service name for DNS resolution
+  # This enables pods to be reached at: <pod-name>.<service-name>.<namespace>.svc.cluster.local
+  serviceName: nginx-headless
+  
+  # Number of desired replicas
+  replicas: 3
+  
+  # Pod Management Policy:
+  # OrderedReady: pods are created/deleted in order (0, 1, 2) - DEFAULT
+  # Parallel: pods are created/deleted in parallel (faster but no ordering)
+  podManagementPolicy: OrderedReady
+  
+  # Update Strategy:
+  # RollingUpdate: updates pods one by one in reverse order (2, 1, 0)
+  # OnDelete: pods are updated only when manually deleted
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Maximum number of pods that can be unavailable during update
+      maxUnavailable: 1
+  
+  selector:
+    matchLabels:
+      app: nginx-stateful
+  
+  template:
+    metadata:
+      labels:
+        app: nginx-stateful
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+          name: http
+        
+        # Each pod gets its own unique storage
+        volumeMounts:
+        - name: nginx-storage
+          mountPath: /usr/share/nginx/html
+        - name: nginx-config
+          mountPath: /var/log/nginx
+        
+        # Readiness probe ensures pod is ready before receiving traffic
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        
+        # Liveness probe restarts pod if it becomes unhealthy
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      
+      # Termination grace period for graceful shutdown
+      terminationGracePeriodSeconds: 30
+  
+  # Volume Claim Templates - creates a PVC for each pod
+  # Each pod gets: nginx-storage-nginx-statefulset-0, nginx-storage-nginx-statefulset-1, etc.
+  volumeClaimTemplates:
+  - metadata:
+      name: nginx-storage
+      labels:
+        app: nginx-stateful
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      # Storage class - use your cluster's available storage class
+      # Examples: standard, fast-ssd, nfs, etc.
+      storageClassName: "standard"
+      resources:
+        requests:
+          storage: 1Gi
+  
+  - metadata:
+      name: nginx-config
+      labels:
+        app: nginx-stateful
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "standard"
+      resources:
+        requests:
+          storage: 100Mi
+
+---
+# Example of how to access individual pods:
+# kubectl exec -it nginx-statefulset-0 -- /bin/bash
+# kubectl exec -it nginx-statefulset-1 -- /bin/bash
+# kubectl exec -it nginx-statefulset-2 -- /bin/bash
+
+# Each pod can be reached via DNS:
+# nginx-statefulset-0.nginx-headless.default.svc.cluster.local
+# nginx-statefulset-1.nginx-headless.default.svc.cluster.local
+# nginx-statefulset-2.nginx-headless.default.svc.cluster.local

@@ -1,0 +1,109 @@
+---
+# PodDisruptionBudget (PDB) Example
+# PDB ensures minimum availability during voluntary disruptions
+# Voluntary disruptions: node drains, cluster upgrades, application updates
+# Does NOT protect against involuntary disruptions (node failures, hardware issues)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-app-pdb
+  namespace: production
+  labels:
+    app: web-application
+spec:
+  # Select pods this PDB applies to (must match deployment/statefulset selector)
+  selector:
+    matchLabels:
+      app: web-app
+      tier: frontend
+  
+  # Option 1: Minimum number of pods that must remain available
+  minAvailable: 2
+  
+  # Option 2: Maximum number of pods that can be unavailable (use one or the other)
+  # maxUnavailable: 1
+
+---
+# PDB with Percentage Values
+# Useful for deployments that scale dynamically
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-server-pdb
+  namespace: production
+  labels:
+    app: api-server
+spec:
+  selector:
+    matchLabels:
+      app: api-server
+  
+  # Keep at least 80% of pods available during disruptions
+  minAvailable: 80%
+  
+  # Alternative: Allow at most 20% to be unavailable
+  # maxUnavailable: 20%
+
+---
+# PDB for Critical Database (Conservative)
+# Very restrictive PDB for stateful workloads that need careful coordination
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: database-pdb
+  namespace: production
+  labels:
+    app: database
+    tier: data
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+      component: database
+  
+  # Only allow 1 pod to be unavailable at a time for databases
+  maxUnavailable: 1
+
+---
+# PDB for Development Environment (Permissive)
+# More relaxed for non-production environments
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: dev-app-pdb
+  namespace: development
+spec:
+  selector:
+    matchLabels:
+      app: dev-app
+  
+  # Allow more disruption in development
+  minAvailable: 50%
+
+# When PDB Matters:
+# 
+# 1. **Cluster Upgrades**: Ensures services remain available during node upgrades
+# 2. **Node Maintenance**: Protects against simultaneous pod evictions during drains
+# 3. **Application Updates**: Controls rolling update pace to maintain availability
+# 4. **Autoscaling**: Prevents autoscaler from removing too many pods at once
+# 5. **Cluster Autoscaling**: Ensures minimum availability during node scale-downs
+# 
+# PDB Best Practices:
+# 
+# 1. **Match Deployment Strategy**: Align PDB with rolling update settings
+# 2. **Consider Dependencies**: Account for service dependencies in PDB settings
+# 3. **Test Disruptions**: Verify PDB behavior during simulated failures
+# 4. **Monitor Violations**: Alert when PDB prevents necessary operations
+# 5. **Environment-Specific**: Use different PDB settings for dev/staging/prod
+# 
+# Common Issues:
+# 
+# 1. **Too Restrictive**: PDB prevents legitimate maintenance operations
+# 2. **Selector Mismatch**: PDB selector doesn't match actual pod labels
+# 3. **Insufficient Replicas**: Not enough pods to satisfy PDB requirements
+# 4. **Conflicting Policies**: Multiple PDBs affecting the same pods
+# 
+# Checking PDB Status:
+# kubectl get pdb
+# kubectl describe pdb web-app-pdb
+# kubectl get events --field-selector reason=EvictionBlocked

@@ -1,0 +1,57 @@
+---
+# CronJob Example - Runs every 5 minutes
+# CronJobs are used to run jobs on a time-based schedule, similar to cron in Linux
+# They create Jobs based on a cron schedule expression
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello-cronjob
+  namespace: default
+spec:
+  # Cron schedule: "minute hour day-of-month month day-of-week"
+  # */5 * * * * = every 5 minutes
+  # Other examples:
+  # "0 2 * * *" = daily at 2:00 AM
+  # "0 0 * * 0" = weekly on Sunday at midnight
+  # "0 0 1 * *" = monthly on the 1st at midnight
+  schedule: "*/5 * * * *"
+  
+  # Timezone for the cron schedule (optional)
+  timeZone: "UTC"
+  
+  # Policy for handling overlapping job executions:
+  # Allow: allows concurrent jobs (default)
+  # Forbid: skips new job if previous is still running
+  # Replace: cancels previous job and starts new one
+  concurrencyPolicy: Forbid
+  
+  # How many successful completed jobs to keep (for debugging)
+  successfulJobsHistoryLimit: 3
+  
+  # How many failed completed jobs to keep (for debugging)
+  failedJobsHistoryLimit: 1
+  
+  # Template for the Job that will be created
+  jobTemplate:
+    spec:
+      # Template for the Pod that will be created by the Job
+      template:
+        spec:
+          # RestartPolicy must be OnFailure or Never for Jobs
+          restartPolicy: OnFailure
+          containers:
+          - name: hello
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - date; echo "Hello from the Kubernetes CronJob at $(date)"
+            # Resource limits are important for CronJobs to prevent resource exhaustion
+            resources:
+              limits:
+                cpu: 100m
+                memory: 128Mi
+              requests:
+                cpu: 50m
+                memory: 64Mi
